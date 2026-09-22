@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rifas_app
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/var/www/html
+      - ./docker/apache/000-default.conf:/etc/apache2/sites-available/000-default.conf
+    environment:
+      - CI_ENVIRONMENT=development
+    depends_on:
+      - db
+    networks:
+      - rifas_network
+
+  db:
+    image: mysql:8.0
+    container_name: rifas_db
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: rifas_db
+      MYSQL_USER: rifas_user
+      MYSQL_PASSWORD: rifas_pass
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - rifas_network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: rifas_phpmyadmin
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: root
+    depends_on:
+      - db
+    networks:
+      - rifas_network
+
+volumes:
+  db_data:
+
+networks:
+  rifas_network:
+    driver: bridge
