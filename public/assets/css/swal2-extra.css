@@ -1,0 +1,25 @@
+/**
+ * SweetAlert2 - Extras del proyecto
+ * Colores de la barra de progreso del toast según el tipo de icono.
+ * Uso: customClass: { timerProgressBar: 'swal2-progress-success' }
+ */
+
+.swal2-progress-success {
+	background: #198754 !important;
+}
+
+.swal2-progress-warning {
+	background: #ffc107 !important;
+}
+
+.swal2-progress-error {
+	background: #dc3545 !important;
+}
+
+.swal2-progress-info {
+	background: #0dcaf0 !important;
+}
+
+.swal2-progress-question {
+	background: #6c757d !important;
+}

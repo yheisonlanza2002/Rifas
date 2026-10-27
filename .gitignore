@@ -124,3 +124,10 @@ _modules/*
 
 /results/
 /phpunit.xml
+
+# Third-party template source (assets already copied to public/assets)
+/rocker-1/
+
+# User uploaded files
+/public/uploads/
+!public/uploads/index.html
