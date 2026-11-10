@@ -19,22 +19,23 @@
 
 <div class="card">
 	<div class="card-header">
-		<div class="d-flex align-items-center justify-content-between">
+		<div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
 			<div>
-				<h6 class="mb-0">Listado de Ventas</h6>
+				<h6 class="mb-0">Historial de Ventas</h6>
 			</div>
-			<div>
-				<form method="get" class="d-flex gap-2">
-					<select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
-						<option value="">Todos los estados</option>
-						<?php foreach ($statuses as $key => $label): ?>
-							<option value="<?= $key ?>" <?= $filterStatus === $key ? 'selected' : '' ?>>
-								<?= esc($label) ?>
-							</option>
-						<?php endforeach; ?>
-					</select>
-				</form>
-			</div>
+			<form method="get" class="d-flex gap-2">
+				<input type="text" name="q" class="form-control form-control-sm" placeholder="Buscar código o participante..."
+					   value="<?= esc($filterQ ?? '') ?>">
+				<select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+					<option value="">Todos los estados</option>
+					<?php foreach ($statuses as $key => $label): ?>
+						<option value="<?= $key ?>" <?= $filterStatus === $key ? 'selected' : '' ?>>
+							<?= esc($label) ?>
+						</option>
+					<?php endforeach; ?>
+				</select>
+				<button type="submit" class="btn btn-sm btn-outline-secondary"><i class="bx bx-search"></i></button>
+			</form>
 		</div>
 	</div>
 	<div class="card-body">
@@ -45,8 +46,9 @@
 						<th>#</th>
 						<th>Código</th>
 						<th>Participante</th>
-						<th>Cantidad</th>
+						<th class="text-center">Boletas</th>
 						<th>Total</th>
+						<th>Pagado</th>
 						<th>Estado</th>
 						<th class="text-center">Acciones</th>
 					</tr>
@@ -54,26 +56,35 @@
 				<tbody>
 					<?php if (empty($sales)): ?>
 						<tr>
-							<td colspan="7" class="text-center py-4 text-muted">
+							<td colspan="8" class="text-center py-4 text-muted">
 								<i class="bx bx-info-circle fs-4 d-block mb-2"></i>
 								No hay ventas registradas.
+								<div class="mt-2">
+									<a href="<?= base_url('ventas/crear') ?>" class="btn btn-sm btn-primary"><i class="bx bx-plus"></i> Nueva Venta</a>
+								</div>
 							</td>
 						</tr>
 					<?php else: ?>
 						<?php foreach ($sales as $s): ?>
+							<?php
+								$pagado  = (float) $s['paid_amount'];
+								$total   = (float) $s['total'];
+								$pend    = (float) $s['pending_amount'];
+								$items   = $itemsCount[(int) $s['id']] ?? 0;
+								$nombre  = trim(($s['participant_name'] ?? '') . ' ' . ($s['participant_last_name'] ?? ''));
+							?>
 							<tr>
 								<td><?= esc($s['id']) ?></td>
 								<td><span class="badge bg-light text-dark border"><?= esc($s['sale_code']) ?></span></td>
-								<td>
-									<div class="d-flex align-items-center gap-2">
-										<div class="widgets-icons-2 rounded-circle bg-light-success text-success px-2 py-1">
-											<i class="bx bx-user"></i>
-										</div>
-										<span class="fw-semibold"><?= esc($s['participant_name'] ?? '—') ?></span>
-									</div>
+								<td class="fw-semibold"><?= esc($nombre ?: '—') ?></td>
+								<td class="text-center"><?= (int) $items ?></td>
+								<td class="sale-paid-cell">$ <?= number_format($total, 2) ?> <?= esc($s['currency']) ?></td>
+								<td class="sale-paid-cell">
+									$ <?= number_format($pagado, 2) ?>
+									<?php if ($pend > 0): ?>
+										<span class="muted">Pendiente: $ <?= number_format($pend, 2) ?></span>
+									<?php endif; ?>
 								</td>
-								<td><?= esc($s['quantity']) ?></td>
-								<td>$ <?= number_format($s['total'], 2) ?> <?= esc($s['currency']) ?></td>
 								<td>
 									<?php if ($s['status'] === 'PAID'): ?>
 										<span class="badge bg-success">Pagada</span>
@@ -85,9 +96,12 @@
 								</td>
 								<td class="text-center">
 									<div class="d-flex justify-content-center gap-2">
-										<a href="<?= base_url('ventas/' . $s['id'] . '/editar') ?>" class="btn btn-sm btn-outline-primary" title="Editar">
-											<i class="bx bx-edit-alt"></i>
-										</a>
+										<?php if ($s['status'] === 'PENDING'): ?>
+											<a href="<?= base_url('ventas/' . $s['id'] . '/registrar-pago') ?>"
+											   class="btn btn-sm btn-success" title="Registrar pago">
+												<i class="bx bx-money"></i>
+											</a>
+										<?php endif; ?>
 										<?php if ($s['status'] !== 'PAID'): ?>
 											<a href="<?= base_url('ventas/' . $s['id'] . '/eliminar') ?>"
 											   class="btn btn-sm btn-outline-danger"
@@ -97,6 +111,11 @@
 											   data-confirm-btn="Sí, eliminar">
 												<i class="bx bx-trash"></i>
 											</a>
+										<?php endif; ?>
+										<?php if ($s['status'] === 'PAID'): ?>
+											<span class="btn btn-sm btn-outline-secondary" title="Saldada">
+												<i class="bx bx-check-double"></i>
+											</span>
 										<?php endif; ?>
 									</div>
 								</td>

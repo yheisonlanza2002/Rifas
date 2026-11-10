@@ -32,8 +32,10 @@ class PrizeModel extends Model
 
     public function forCompany(int $companyId): self
     {
-        return $this->where('raffles.company_id', $companyId)
-            ->join('raffles', 'raffles.id = prizes.raffle_id');
+        return $this->select('prizes.*, raffles.name AS raffle_name, lotteries.name AS lottery_name', false)
+            ->where('raffles.company_id', $companyId)
+            ->join('raffles', 'raffles.id = prizes.raffle_id')
+            ->join('lotteries', 'lotteries.id = prizes.lottery_id', 'left');
     }
 
     public function findByPosition(int $raffleId, int $position): ?array

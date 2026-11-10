@@ -658,8 +658,9 @@ class Validation extends BaseConfig
             ],
         ],
         'draw_date' => [
-            'rules'  => 'permit_empty|valid_date[Y-m-d]',
+            'rules'  => 'required|valid_date[Y-m-d]',
             'errors' => [
+                'required'   => 'La fecha del sorteo es obligatoria.',
                 'valid_date' => 'La fecha del sorteo no es válida.',
             ],
         ],
@@ -757,8 +758,9 @@ class Validation extends BaseConfig
             ],
         ],
         'draw_date' => [
-            'rules'  => 'permit_empty|valid_date[Y-m-d]',
+            'rules'  => 'required|valid_date[Y-m-d]',
             'errors' => [
+                'required'   => 'La fecha del sorteo es obligatoria.',
                 'valid_date' => 'La fecha del sorteo no es válida.',
             ],
         ],
@@ -942,8 +944,15 @@ class Validation extends BaseConfig
     // MÓDULO 6: VENTAS
     // ========================================================================
 
-    /** Crear venta */
-    public array $saleCreate = [
+    /** Venta desde el POS */
+    public array $salePos = [
+        'raffle_id' => [
+            'rules'  => 'required|is_natural_no_zero',
+            'errors' => [
+                'required'           => 'La rifa es obligatoria.',
+                'is_natural_no_zero' => 'Debe seleccionar una rifa válida.',
+            ],
+        ],
         'participant_id' => [
             'rules'  => 'required|is_natural_no_zero',
             'errors' => [
@@ -951,78 +960,17 @@ class Validation extends BaseConfig
                 'is_natural_no_zero' => 'Debe seleccionar un participante válido.',
             ],
         ],
-        'sale_code' => [
-            'rules'  => 'required|min_length[3]|max_length[80]|is_unique[sales.sale_code]',
+        'payment_method' => [
+            'rules'  => 'required|in_list[CASH,TRANSFER,CREDIT]',
             'errors' => [
-                'required'   => 'El código de venta es obligatorio.',
-                'min_length' => 'El código debe tener al menos 3 caracteres.',
-                'max_length' => 'El código no puede exceder 80 caracteres.',
-                'is_unique'  => 'Este código ya está registrado.',
+                'required' => 'El método de pago es obligatorio.',
+                'in_list'  => 'Método de pago no válido.',
             ],
         ],
-        'status' => [
-            'rules'  => 'required|in_list[PENDING,PAID,CANCELLED]',
+        'reference' => [
+            'rules'  => 'permit_empty|max_length[150]',
             'errors' => [
-                'required' => 'El estado es obligatorio.',
-                'in_list'  => 'Estado no válido.',
-            ],
-        ],
-        'quantity' => [
-            'rules'  => 'required|is_natural_no_zero',
-            'errors' => [
-                'required'           => 'La cantidad es obligatoria.',
-                'is_natural_no_zero' => 'La cantidad debe ser un número entero positivo.',
-            ],
-        ],
-        'subtotal' => [
-            'rules'  => 'required|decimal|greater_than_equal_to[0]',
-            'errors' => [
-                'required'                => 'El subtotal es obligatorio.',
-                'decimal'                 => 'El subtotal debe ser un número decimal válido.',
-                'greater_than_equal_to'   => 'El subtotal no puede ser negativo.',
-            ],
-        ],
-        'discount' => [
-            'rules'  => 'permit_empty|decimal|greater_than_equal_to[0]',
-            'errors' => [
-                'decimal'                => 'El descuento debe ser un número decimal válido.',
-                'greater_than_equal_to'  => 'El descuento no puede ser negativo.',
-            ],
-        ],
-        'tax_amount' => [
-            'rules'  => 'permit_empty|decimal|greater_than_equal_to[0]',
-            'errors' => [
-                'decimal'                => 'El impuesto debe ser un número decimal válido.',
-                'greater_than_equal_to'  => 'El impuesto no puede ser negativo.',
-            ],
-        ],
-        'commission_amount' => [
-            'rules'  => 'permit_empty|decimal|greater_than_equal_to[0]',
-            'errors' => [
-                'decimal'                => 'La comisión debe ser un número decimal válido.',
-                'greater_than_equal_to'  => 'La comisión no puede ser negativo.',
-            ],
-        ],
-        'total' => [
-            'rules'  => 'required|decimal|greater_than[0]',
-            'errors' => [
-                'required'      => 'El total es obligatorio.',
-                'decimal'       => 'El total debe ser un número decimal válido.',
-                'greater_than'  => 'El total debe ser mayor que cero.',
-            ],
-        ],
-        'paid_amount' => [
-            'rules'  => 'permit_empty|decimal|greater_than_equal_to[0]',
-            'errors' => [
-                'decimal'                => 'El monto pagado debe ser un número decimal válido.',
-                'greater_than_equal_to'  => 'El monto pagado no puede ser negativo.',
-            ],
-        ],
-        'currency' => [
-            'rules'  => 'required|in_list[COP,USD,EUR]',
-            'errors' => [
-                'required' => 'La moneda es obligatoria.',
-                'in_list'  => 'Moneda no válida.',
+                'max_length' => 'La referencia no puede exceder 150 caracteres.',
             ],
         ],
         'notes' => [
@@ -1033,122 +981,8 @@ class Validation extends BaseConfig
         ],
     ];
 
-    /** Actualizar venta */
-    public array $saleUpdate = [
-        'id' => [
-            'rules'  => 'required|is_natural_no_zero',
-            'errors' => [
-                'required' => 'ID de venta no proporcionado.',
-            ],
-        ],
-        'participant_id' => [
-            'rules'  => 'required|is_natural_no_zero',
-            'errors' => [
-                'required'           => 'El participante es obligatorio.',
-                'is_natural_no_zero' => 'Debe seleccionar un participante válido.',
-            ],
-        ],
-        'sale_code' => [
-            'rules'  => 'required|min_length[3]|max_length[80]|is_unique[sales.sale_code,id,{id}]',
-            'errors' => [
-                'required'   => 'El código de venta es obligatorio.',
-                'min_length' => 'El código debe tener al menos 3 caracteres.',
-                'max_length' => 'El código no puede exceder 80 caracteres.',
-                'is_unique'  => 'Este código ya está en uso por otra venta.',
-            ],
-        ],
-        'status' => [
-            'rules'  => 'required|in_list[PENDING,PAID,CANCELLED]',
-            'errors' => [
-                'required' => 'El estado es obligatorio.',
-                'in_list'  => 'Estado no válido.',
-            ],
-        ],
-        'quantity' => [
-            'rules'  => 'required|is_natural_no_zero',
-            'errors' => [
-                'required'           => 'La cantidad es obligatoria.',
-                'is_natural_no_zero' => 'La cantidad debe ser un número entero positivo.',
-            ],
-        ],
-        'subtotal' => [
-            'rules'  => 'required|decimal|greater_than_equal_to[0]',
-            'errors' => [
-                'required'                => 'El subtotal es obligatorio.',
-                'decimal'                 => 'El subtotal debe ser un número decimal válido.',
-                'greater_than_equal_to'   => 'El subtotal no puede ser negativo.',
-            ],
-        ],
-        'discount' => [
-            'rules'  => 'permit_empty|decimal|greater_than_equal_to[0]',
-            'errors' => [
-                'decimal'                => 'El descuento debe ser un número decimal válido.',
-                'greater_than_equal_to'  => 'El descuento no puede ser negativo.',
-            ],
-        ],
-        'tax_amount' => [
-            'rules'  => 'permit_empty|decimal|greater_than_equal_to[0]',
-            'errors' => [
-                'decimal'                => 'El impuesto debe ser un número decimal válido.',
-                'greater_than_equal_to'  => 'El impuesto no puede ser negativo.',
-            ],
-        ],
-        'commission_amount' => [
-            'rules'  => 'permit_empty|decimal|greater_than_equal_to[0]',
-            'errors' => [
-                'decimal'                => 'La comisión debe ser un número decimal válido.',
-                'greater_than_equal_to'  => 'La comisión no puede ser negativo.',
-            ],
-        ],
-        'total' => [
-            'rules'  => 'required|decimal|greater_than[0]',
-            'errors' => [
-                'required'      => 'El total es obligatorio.',
-                'decimal'       => 'El total debe ser un número decimal válido.',
-                'greater_than'  => 'El total debe ser mayor que cero.',
-            ],
-        ],
-        'paid_amount' => [
-            'rules'  => 'permit_empty|decimal|greater_than_equal_to[0]',
-            'errors' => [
-                'decimal'                => 'El monto pagado debe ser un número decimal válido.',
-                'greater_than_equal_to'  => 'El monto pagado no puede ser negativo.',
-            ],
-        ],
-        'currency' => [
-            'rules'  => 'required|in_list[COP,USD,EUR]',
-            'errors' => [
-                'required' => 'La moneda es obligatoria.',
-                'in_list'  => 'Moneda no válida.',
-            ],
-        ],
-        'notes' => [
-            'rules'  => 'permit_empty|max_length[1000]',
-            'errors' => [
-                'max_length' => 'Las notas no pueden exceder 1000 caracteres.',
-            ],
-        ],
-    ];
-
-    // ========================================================================
-    // MÓDULO 7: PAGOS Y PASARRELAS
-    // ========================================================================
-
-    /** Crear pago */
-    public array $paymentCreate = [
-        'sale_id' => [
-            'rules'  => 'required|is_natural_no_zero',
-            'errors' => [
-                'required'           => 'La venta es obligatoria.',
-                'is_natural_no_zero' => 'Debe seleccionar una venta válida.',
-            ],
-        ],
-        'gateway_id' => [
-            'rules'  => 'permit_empty|is_natural_no_zero',
-            'errors' => [
-                'is_natural_no_zero' => 'Debe seleccionar una pasarela válida.',
-            ],
-        ],
+    /** Registrar pago de una venta */
+    public array $registrarPago = [
         'amount' => [
             'rules'  => 'required|decimal|greater_than[0]',
             'errors' => [
@@ -1157,115 +991,17 @@ class Validation extends BaseConfig
                 'greater_than'  => 'El monto debe ser mayor que cero.',
             ],
         ],
-        'fee_amount' => [
-            'rules'  => 'permit_empty|decimal|greater_than_equal_to[0]',
-            'errors' => [
-                'decimal'                => 'La comisión debe ser un número decimal válido.',
-                'greater_than_equal_to'  => 'La comisión no puede ser negativa.',
-            ],
-        ],
-        'net_amount' => [
-            'rules'  => 'permit_empty|decimal|greater_than_equal_to[0]',
-            'errors' => [
-                'decimal'                => 'El monto neto debe ser un número decimal válido.',
-                'greater_than_equal_to'  => 'El monto neto no puede ser negativo.',
-            ],
-        ],
         'payment_method' => [
-            'rules'  => 'required|max_length[40]',
+            'rules'  => 'required|in_list[CASH,TRANSFER]',
             'errors' => [
-                'required'   => 'El método de pago es obligatorio.',
-                'max_length' => 'El método no puede exceder 40 caracteres.',
+                'required' => 'El método de pago es obligatorio.',
+                'in_list'  => 'Método de pago no válido.',
             ],
         ],
-        'status' => [
-            'rules'  => 'required|in_list[PENDING,COMPLETED,FAILED,REFUNDED]',
-            'errors' => [
-                'required' => 'El estado es obligatorio.',
-                'in_list'  => 'Estado no válido.',
-            ],
-        ],
-        'transaction_reference' => [
+        'reference' => [
             'rules'  => 'permit_empty|max_length[150]',
             'errors' => [
                 'max_length' => 'La referencia no puede exceder 150 caracteres.',
-            ],
-        ],
-        'gateway' => [
-            'rules'  => 'permit_empty|max_length[80]',
-            'errors' => [
-                'max_length' => 'La pasarela no puede exceder 80 caracteres.',
-            ],
-        ],
-    ];
-
-    /** Actualizar pago */
-    public array $paymentUpdate = [
-        'id' => [
-            'rules'  => 'required|is_natural_no_zero',
-            'errors' => [
-                'required' => 'ID de pago no proporcionado.',
-            ],
-        ],
-        'sale_id' => [
-            'rules'  => 'required|is_natural_no_zero',
-            'errors' => [
-                'required'           => 'La venta es obligatoria.',
-                'is_natural_no_zero' => 'Debe seleccionar una venta válida.',
-            ],
-        ],
-        'gateway_id' => [
-            'rules'  => 'permit_empty|is_natural_no_zero',
-            'errors' => [
-                'is_natural_no_zero' => 'Debe seleccionar una pasarela válida.',
-            ],
-        ],
-        'amount' => [
-            'rules'  => 'required|decimal|greater_than[0]',
-            'errors' => [
-                'required'      => 'El monto es obligatorio.',
-                'decimal'       => 'El monto debe ser un número decimal válido.',
-                'greater_than'  => 'El monto debe ser mayor que cero.',
-            ],
-        ],
-        'fee_amount' => [
-            'rules'  => 'permit_empty|decimal|greater_than_equal_to[0]',
-            'errors' => [
-                'decimal'                => 'La comisión debe ser un número decimal válido.',
-                'greater_than_equal_to'  => 'La comisión no puede ser negativa.',
-            ],
-        ],
-        'net_amount' => [
-            'rules'  => 'permit_empty|decimal|greater_than_equal_to[0]',
-            'errors' => [
-                'decimal'                => 'El monto neto debe ser un número decimal válido.',
-                'greater_than_equal_to'  => 'El monto neto no puede ser negativo.',
-            ],
-        ],
-        'payment_method' => [
-            'rules'  => 'required|max_length[40]',
-            'errors' => [
-                'required'   => 'El método de pago es obligatorio.',
-                'max_length' => 'El método no puede exceder 40 caracteres.',
-            ],
-        ],
-        'status' => [
-            'rules'  => 'required|in_list[PENDING,COMPLETED,FAILED,REFUNDED]',
-            'errors' => [
-                'required' => 'El estado es obligatorio.',
-                'in_list'  => 'Estado no válido.',
-            ],
-        ],
-        'transaction_reference' => [
-            'rules'  => 'permit_empty|max_length[150]',
-            'errors' => [
-                'max_length' => 'La referencia no puede exceder 150 caracteres.',
-            ],
-        ],
-        'gateway' => [
-            'rules'  => 'permit_empty|max_length[80]',
-            'errors' => [
-                'max_length' => 'La pasarela no puede exceder 80 caracteres.',
             ],
         ],
     ];
@@ -1468,6 +1204,17 @@ class Validation extends BaseConfig
             'rules'  => 'permit_empty|max_length[150]',
             'errors' => [
                 'max_length' => 'La referencia externa no puede exceder 150 caracteres.',
+            ],
+        ],
+    ];
+
+    /** Ejecutar sorteo con resultado de lotería */
+    public array $drawExecute = [
+        'lottery_result' => [
+            'rules'  => 'required|regex_match[^[0-9]{1,10}$]',
+            'errors' => [
+                'required'     => 'El resultado de la lotería es obligatorio.',
+                'regex_match'  => 'El resultado solo debe contener números.',
             ],
         ],
     ];

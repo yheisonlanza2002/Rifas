@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', function () {
     const prizeTypeSelect = document.getElementById('prize_type');
     const camposMoney = document.querySelectorAll('.campo-money');
+    const quantityInput = document.getElementById('quantity');
     const nameInput = document.getElementById('name');
     const lotterySelect = document.getElementById('lottery_id');
     const raffleSelect = document.getElementById('raffle_id');
@@ -19,6 +20,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 campo.classList.remove('visible');
             }
         });
+
+        if (quantityInput) {
+            const col = quantityInput.closest('.col-md-4');
+            if (esMONEY) {
+                if (col) col.style.display = 'none';
+                quantityInput.value = '1';
+            } else {
+                if (col) col.style.display = '';
+            }
+        }
     }
 
     function actualizarVistaPrevia() {
@@ -28,7 +39,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const tipo = prizeTypeSelect?.value === 'MONEY' ? 'Premio en Dinero' : 'Premio Físico';
         const posicion = positionInput?.value || '—';
         const valor = valueInput?.value ? '$ ' + parseFloat(valueInput.value).toLocaleString() : '—';
-        const recurrencia = recurrenceSelect?.value ? 'Cada ' + recurrenceSelect.value + ' días' : '—';
+        const recurrencia = recurrenceSelect?.value ? recurrenceSelect.options[recurrenceSelect.selectedIndex].text : '—';
         const fechaSorteo = drawDateInput?.value || '—';
 
         if (!nameInput?.value && !lotterySelect?.value) {
@@ -50,7 +61,7 @@ document.addEventListener('DOMContentLoaded', function () {
         html += '<div class="prize-preview-item"><span class="prize-preview-label">Valor</span><span class="prize-preview-value">' + valor + '</span></div>';
         if (prizeTypeSelect?.value === 'MONEY') {
             html += '<div class="prize-preview-item"><span class="prize-preview-label">Recurrencia</span><span class="prize-preview-value">' + recurrencia + '</span></div>';
-            html += '<div class="prize-preview-item"><span class="prize-preview-label">Fecha Sorteo</span><span class="prize-preview-value">' + fechaSorteo + '</span></div>';
+            html += '<div class="prize-preview-item"><span class="prize-preview-label">Fecha Inicio</span><span class="prize-preview-value">' + fechaSorteo + '</span></div>';
         }
         html += '</div>';
         html += '</div>';
@@ -76,8 +87,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function agregarPremio() {
         if (!templatePremio || !contenedorPremios) return;
-        const clone = templatePremio.content.cloneNode(true);
-        const html = clone.innerHTML.split('INDEX').join(premioIndex);
+        const html = templatePremio.innerHTML.split('INDEX').join(premioIndex);
         const wrapper = document.createElement('div');
         wrapper.innerHTML = html;
         const prizeItem = wrapper.firstElementChild;

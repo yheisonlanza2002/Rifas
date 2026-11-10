@@ -5,12 +5,14 @@ namespace App\Controllers;
 use App\Models\PrizeModel;
 use App\Models\RaffleModel;
 use App\Models\LotteryModel;
+use App\Models\DrawModel;
 
 class Prizes extends BaseController
 {
     protected PrizeModel $prizeModel;
     protected RaffleModel $raffleModel;
     protected LotteryModel $lotteryModel;
+    protected DrawModel $drawModel;
 
     private const STATUSES = [
         'ACTIVE'   => 'Activo',
@@ -33,6 +35,7 @@ class Prizes extends BaseController
         $this->prizeModel = new PrizeModel();
         $this->raffleModel = new RaffleModel();
         $this->lotteryModel = new LotteryModel();
+        $this->drawModel = new DrawModel();
     }
 
     public function index(): string
@@ -69,14 +72,23 @@ class Prizes extends BaseController
 
     public function store()
     {
-        if (!$this->validateData($this->request->getPost(), 'prizeCreate')) {
+        $post = $this->request->getPost();
+        $post['value'] = str_replace('.', '', $post['value'] ?? '');
+
+        if (!$this->validateData($post, 'prizeCreate')) {
             return redirect()->back()
                 ->withInput()
                 ->with('errors', $this->validator->getErrors())
                 ->with('error', 'Revisa los errores del formulario.');
         }
 
-        $post = $this->request->getPost();
+        if ($post['prize_type'] === 'MONEY' && empty($post['recurrence_days'])) {
+            return redirect()->back()
+                ->withInput()
+                ->with('errors', ['recurrence_days' => 'La recurrencia es obligatoria para premios en dinero.'])
+                ->with('error', 'Revisa los errores del formulario.');
+        }
+
         $prizeImage = $this->procesarImagenPremio();
 
         $prizeId = $this->prizeModel->insert([
@@ -94,11 +106,17 @@ class Prizes extends BaseController
             'status'          => $post['status'],
             'prize_type'      => $post['prize_type'],
             'recurrence_days' => $post['prize_type'] === 'MONEY' && !empty($post['recurrence_days']) ? $post['recurrence_days'] : null,
-            'draw_date'       => $post['prize_type'] === 'MONEY' && !empty($post['draw_date']) ? $post['draw_date'] : null,
+            'draw_date'       => $post['draw_date'],
             'prize_image'     => $prizeImage,
         ]);
 
-        $this->guardarPremiosAdicionales($post['raffle_id'], $post['position'], $post['additional_prizes'] ?? []);
+        $this->crearSorteoPremio((int) $prizeId, (int) $post['raffle_id'], $post['name'], $post['draw_date']);
+        $this->guardarPremiosAdicionales(
+            (int) $post['raffle_id'],
+            (int) $post['position'],
+            $post['additional_prizes'] ?? [],
+            $this->request->getFiles()['additional_prizes'] ?? []
+        );
 
         return redirect()->to(base_url('premios'))
             ->with('success', 'Premio creado correctamente.');
@@ -133,6 +151,7 @@ class Prizes extends BaseController
 
         $data = $this->request->getPost();
         $data['id'] = $id;
+        $data['value'] = str_replace('.', '', $data['value'] ?? '');
 
         if (!$this->validateData($data, 'prizeUpdate')) {
             return redirect()->back()
@@ -141,7 +160,15 @@ class Prizes extends BaseController
                 ->with('error', 'Revisa los errores del formulario.');
         }
 
-        $post = $this->request->getPost();
+        $post = $data;
+
+        if ($post['prize_type'] === 'MONEY' && empty($post['recurrence_days'])) {
+            return redirect()->back()
+                ->withInput()
+                ->with('errors', ['recurrence_days' => 'La recurrencia es obligatoria para premios en dinero.'])
+                ->with('error', 'Revisa los errores del formulario.');
+        }
+
         $prizeImage = $this->procesarImagenPremio();
 
         $updateData = [
@@ -157,7 +184,7 @@ class Prizes extends BaseController
             'status'          => $post['status'],
             'prize_type'      => $post['prize_type'],
             'recurrence_days' => $post['prize_type'] === 'MONEY' && !empty($post['recurrence_days']) ? $post['recurrence_days'] : null,
-            'draw_date'       => $post['prize_type'] === 'MONEY' && !empty($post['draw_date']) ? $post['draw_date'] : null,
+            'draw_date'       => $post['draw_date'],
         ];
 
         if ($prizeImage) {
@@ -165,6 +192,7 @@ class Prizes extends BaseController
         }
 
         $this->prizeModel->update($id, $updateData);
+        $this->sincronizarSorteoPremio($id, $post['name'], $post['draw_date']);
 
         return redirect()->to(base_url('premios'))
             ->with('success', 'Premio actualizado correctamente.');
@@ -183,27 +211,63 @@ class Prizes extends BaseController
             ->with('success', 'Premio eliminado correctamente.');
     }
 
-    private function guardarPremiosAdicionales(int $raffleId, int $positionBase, array $prizes): void
+    private function crearSorteoPremio(int $prizeId, int $raffleId, string $prizeName, string $drawDate): void
+    {
+        $this->drawModel->insert([
+            'uuid'         => $this->generateUuid(),
+            'company_id'   => (int) session()->get('company_id'),
+            'raffle_id'    => $raffleId,
+            'prize_id'     => $prizeId,
+            'name'         => mb_substr('Sorteo - ' . $prizeName, 0, 150),
+            'scheduled_at' => $drawDate . ' 20:00:00',
+            'status'       => 'SCHEDULED',
+            'method'       => 'MANUAL',
+            'created_by'   => session()->get('user_id'),
+        ]);
+    }
+
+    private function sincronizarSorteoPremio(int $prizeId, string $prizeName, string $drawDate): void
+    {
+        $sorteo = $this->drawModel
+            ->where('prize_id', $prizeId)
+            ->where('status', 'SCHEDULED')
+            ->first();
+
+        if ($sorteo) {
+            $this->drawModel->update($sorteo['id'], [
+                'name'         => mb_substr('Sorteo - ' . $prizeName, 0, 150),
+                'scheduled_at' => $drawDate . ' 20:00:00',
+            ]);
+        } else {
+            $prize = $this->prizeModel->find($prizeId);
+            if ($prize) {
+                $this->crearSorteoPremio($prizeId, (int) $prize['raffle_id'], $prizeName, $drawDate);
+            }
+        }
+    }
+
+    private function guardarPremiosAdicionales(int $raffleId, int $positionBase, array $prizes, array $files = []): void
     {
         if (empty($prizes)) return;
 
         $position = $positionBase + 1;
 
-        foreach ($prizes as $p) {
+        foreach ($prizes as $indice => $p) {
             if (empty($p['name'])) continue;
 
             $imagePath = null;
-            if (!empty($p['image']['tmp_name'])) {
-                $file = $p['image'];
-                $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-                if (in_array($extension, ['jpg', 'jpeg', 'png', 'webp']) && $file['size'] <= 2097152) {
+            $archivo = $files[$indice]['image'] ?? null;
+
+            if ($archivo && $archivo->isValid() && !$archivo->hasMoved()) {
+                $extension = strtolower($archivo->getExtension());
+                if (in_array($extension, ['jpg', 'jpeg', 'png', 'webp']) && $archivo->getSize() <= 2097152) {
                     $nombre = uniqid('prize_') . '.' . $extension;
-                    move_uploaded_file($file['tmp_name'], ROOTPATH . 'public/uploads/prizes/' . $nombre);
+                    $archivo->move(ROOTPATH . 'public/uploads/prizes', $nombre);
                     $imagePath = $nombre;
                 }
             }
 
-            $this->prizeModel->insert([
+            $prizeAdicionalId = $this->prizeModel->insert([
                 'uuid'            => $this->generateUuid(),
                 'raffle_id'       => $raffleId,
                 'lottery_id'      => $p['lottery_id'] ?? null,
@@ -211,16 +275,20 @@ class Prizes extends BaseController
                 'description'     => null,
                 'position'        => $position++,
                 'quantity'        => 1,
-                'value'           => $p['value'] ?? 0,
+                'value'           => 0,
                 'currency'        => 'COP',
                 'image'           => null,
                 'odds'            => null,
                 'status'          => 'ACTIVE',
                 'prize_type'      => $p['type'] ?? 'PRIZE',
                 'recurrence_days' => ($p['type'] ?? 'PRIZE') === 'MONEY' && !empty($p['recurrence_days']) ? $p['recurrence_days'] : null,
-                'draw_date'       => ($p['type'] ?? 'PRIZE') === 'MONEY' && !empty($p['draw_date']) ? $p['draw_date'] : null,
+                'draw_date'       => !empty($p['draw_date']) ? $p['draw_date'] : null,
                 'prize_image'     => $imagePath,
             ]);
+
+            if (!empty($p['draw_date'])) {
+                $this->crearSorteoPremio((int) $prizeAdicionalId, $raffleId, $p['name'], $p['draw_date']);
+            }
         }
     }
 

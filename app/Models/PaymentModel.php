@@ -31,7 +31,8 @@ class PaymentModel extends Model
 
     public function forCompany(int $companyId): self
     {
-        return $this->where('payments.company_id', $companyId)
+        return $this->select('payments.*, sales.sale_code AS sale_code', false)
+            ->where('payments.company_id', $companyId)
             ->join('sales', 'sales.id = payments.sale_id');
     }
 

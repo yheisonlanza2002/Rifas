@@ -18,6 +18,21 @@ $routes->group('auth', static function ($routes) {
     $routes->get('reset-password', 'Auth::resetPassword');
 });
 
+// Webhooks públicos (sin filtro auth)
+$routes->post('webhook/wompi', 'Webhook::wompi');
+$routes->post('webhooks/wompi', 'Webhook::wompi');
+
+// TIENDA WEB PÚBLICA (clientes)
+$routes->group('tienda', static function ($routes) {
+    $routes->get('/', 'Store::index');
+    $routes->get('rifa/(:segment)', 'Store::show/$1');
+    $routes->get('buscar-numero', 'Store::searchNumber');
+    $routes->post('checkout', 'Store::checkout');
+    $routes->get('pago/(:segment)', 'Store::payment/$1');
+    $routes->get('confirmacion/(:segment)', 'Store::confirmation/$1');
+    $routes->get('consultar', 'Store::consultar');
+});
+
 // Componentes (demos - protegidos)
 $routes->group('componentes', ['filter' => 'auth'], static function ($routes) {
     $routes->get('alertas', 'Components::alerts');
@@ -39,6 +54,7 @@ $routes->group('usuarios', ['filter' => 'auth'], static function ($routes) {
 $routes->group('participantes', ['filter' => 'auth'], static function ($routes) {
     $routes->get('/', 'Participants::index');
     $routes->get('crear', 'Participants::create');
+    $routes->post('rapido', 'Participants::rapido');
     $routes->post('/', 'Participants::store');
     $routes->get('(:num)/editar', 'Participants::edit/$1');
     $routes->post('(:num)', 'Participants::update/$1');
@@ -68,6 +84,7 @@ $routes->group('premios', ['filter' => 'auth'], static function ($routes) {
 // MÓDULO 5: Boletas/Tickets
 $routes->group('boletas', ['filter' => 'auth'], static function ($routes) {
     $routes->get('/', 'Tickets::index');
+    $routes->get('cargar', 'Tickets::cargar');
     $routes->get('crear', 'Tickets::create');
     $routes->post('/', 'Tickets::store');
     $routes->get('(:num)/editar', 'Tickets::edit/$1');
@@ -75,24 +92,26 @@ $routes->group('boletas', ['filter' => 'auth'], static function ($routes) {
     $routes->get('(:num)/eliminar', 'Tickets::delete/$1');
 });
 
-// MÓDULO 6: Ventas
+// MÓDULO 6: Ventas (POS)
 $routes->group('ventas', ['filter' => 'auth'], static function ($routes) {
     $routes->get('/', 'Sales::index');
     $routes->get('crear', 'Sales::create');
+    $routes->get('datos-rifa', 'Sales::datosRifa');
+    $routes->get('buscar-numero', 'Sales::buscarNumero');
     $routes->post('/', 'Sales::store');
-    $routes->get('(:num)/editar', 'Sales::edit/$1');
-    $routes->post('(:num)', 'Sales::update/$1');
+    $routes->get('(:num)/registrar-pago', 'Sales::formRegistrarPago/$1');
+    $routes->post('(:num)/registrar-pago', 'Sales::registrarPago/$1');
     $routes->get('(:num)/eliminar', 'Sales::delete/$1');
 });
 
-// MÓDULO 7: Pagos y Pasarelas
+// MÓDULO 7: Pagos (solo lectura - reportes)
 $routes->group('pagos', ['filter' => 'auth'], static function ($routes) {
     $routes->get('/', 'Payments::index');
-    $routes->get('crear', 'Payments::create');
-    $routes->post('/', 'Payments::store');
-    $routes->get('(:num)/editar', 'Payments::edit/$1');
-    $routes->post('(:num)', 'Payments::update/$1');
-    $routes->get('(:num)/eliminar', 'Payments::delete/$1');
+});
+
+// MÓDULO: Reportes y Estadísticas
+$routes->group('reportes', ['filter' => 'auth'], static function ($routes) {
+    $routes->get('/', 'Reports::index');
 });
 
 $routes->group('pasarelas', ['filter' => 'auth'], static function ($routes) {
@@ -112,7 +131,7 @@ $routes->group('sorteos', ['filter' => 'auth'], static function ($routes) {
     $routes->get('(:num)/editar', 'Draws::edit/$1');
     $routes->post('(:num)', 'Draws::update/$1');
     $routes->get('(:num)/eliminar', 'Draws::delete/$1');
-    $routes->get('(:num)/ejecutar', 'Draws::execute/$1');
+    $routes->post('(:num)/ejecutar', 'Draws::execute/$1');
     $routes->get('(:num)/resultados', 'Draws::results/$1');
     $routes->get('(:num)/cancelar', 'Draws::cancel/$1');
 });

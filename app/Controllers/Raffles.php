@@ -78,14 +78,17 @@ class Raffles extends BaseController
 
     public function store()
     {
-        if (!$this->validateData($this->request->getPost(), 'raffleCreate')) {
+        $post = $this->request->getPost();
+        $post['ticket_price'] = str_replace('.', '', $post['ticket_price'] ?? '');
+        $post['numbers_per_ticket'] = str_replace('.', '', $post['numbers_per_ticket'] ?? '');
+
+        if (!$this->validateData($post, 'raffleCreate')) {
             return redirect()->back()
                 ->withInput()
                 ->with('errors', $this->validator->getErrors())
                 ->with('error', 'Revisa los errores del formulario.');
         }
 
-        $post = $this->request->getPost();
         $companyId = (int) session()->get('company_id');
 
         $cantidad = (int) $post['ticket_quantity'];
@@ -130,13 +133,14 @@ class Raffles extends BaseController
             'end_at'                 => !empty($post['end_at']) ? $post['end_at'] : null,
         ];
 
+        $raffleId = $this->raffleModel->insert($raffleData);
+
         if ($bannerImage) {
             $this->raffleModel->update($raffleId, ['banner_image' => $bannerImage]);
         }
 
         $this->crearBoletas($raffleId, $post, $companyId);
         $this->guardarPremios($raffleId, $post['prizes'] ?? []);
-
         return redirect()->to(base_url('rifas'))
             ->with('success', 'Rifa creada correctamente. Se generaron ' . $cantidad . ' boletas.');
     }
@@ -170,6 +174,8 @@ class Raffles extends BaseController
 
         $data = $this->request->getPost();
         $data['id'] = $id;
+        $data['ticket_price'] = str_replace('.', '', $data['ticket_price'] ?? '');
+        $data['numbers_per_ticket'] = str_replace('.', '', $data['numbers_per_ticket'] ?? '');
 
         if (!$this->validateData($data, 'raffleUpdate')) {
             return redirect()->back()
@@ -178,7 +184,7 @@ class Raffles extends BaseController
                 ->with('error', 'Revisa los errores del formulario.');
         }
 
-        $post = $this->request->getPost();
+        $post = $data;
 
         $updateData = [
             'name'                   => $post['name'],
@@ -304,6 +310,49 @@ class Raffles extends BaseController
 
         if (!empty($data)) {
             $this->ticketModel->insertBatch($data);
+        }
+
+        $this->guardarNumerosBoletas($raffleId, $numerosGenerados, $numerosPorBoleta);
+    }
+
+    private function guardarNumerosBoletas(int $raffleId, array $numeros, int $numerosPorBoleta): void
+    {
+        if (empty($numeros)) {
+            return;
+        }
+
+        $tickets = $this->db->table('tickets')
+            ->select('id')
+            ->where('raffle_id', $raffleId)
+            ->orderBy('id', 'ASC')
+            ->get()
+            ->getResultArray();
+
+        $filas = [];
+        $indice = 0;
+
+        foreach ($tickets as $ticket) {
+            for ($n = 0; $n < $numerosPorBoleta; $n++) {
+                if (!isset($numeros[$indice])) {
+                    break 2;
+                }
+
+                $numero = $numeros[$indice];
+                $filas[] = [
+                    'uuid'           => $this->generateUuid(),
+                    'raffle_id'      => $raffleId,
+                    'ticket_id'      => (int) $ticket['id'],
+                    'number'         => $numero,
+                    'display_number' => $numero,
+                    'is_winner'      => 0,
+                    'created_at'     => date('Y-m-d H:i:s'),
+                ];
+                $indice++;
+            }
+        }
+
+        if (!empty($filas)) {
+            $this->db->table('ticket_numbers')->insertBatch($filas);
         }
     }
 

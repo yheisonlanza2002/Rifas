@@ -32,6 +32,7 @@
 					<tr>
 						<th>#</th>
 						<th>Sorteo</th>
+						<th>Premio / Lotería</th>
 						<th>Rifa</th>
 						<th>Fecha Programada</th>
 						<th>Método</th>
@@ -42,7 +43,7 @@
 				<tbody>
 					<?php if (empty($draws)): ?>
 						<tr>
-							<td colspan="7" class="text-center py-4 text-muted">
+							<td colspan="8" class="text-center py-4 text-muted">
 								<i class="bx bx-info-circle fs-4 d-block mb-2"></i>
 								No hay sorteos registrados.
 							</td>
@@ -56,10 +57,23 @@
 										<div class="widgets-icons-2 rounded-circle bg-info text-white px-2 py-1">
 											<i class="bx bx-trophy"></i>
 										</div>
-										<span class="fw-semibold"><?= esc($d['name']) ?></span>
-									</div>
-								</td>
-								<td><?= esc($d['raffle_name'] ?? '—') ?></td>
+								<span class="fw-semibold"><?= esc($d['name']) ?></span>
+								</div>
+							</td>
+							<td>
+								<?php if (!empty($d['prize_name'])): ?>
+									<div class="fw-semibold"><?= esc($d['prize_name']) ?></div>
+									<?php if (!empty($d['lottery_name'])): ?>
+										<span class="badge bg-info bg-opacity-10 text-info border"><?= esc($d['lottery_name']) ?></span>
+									<?php endif; ?>
+									<?php if (($d['prize_type'] ?? '') === 'MONEY' && !empty($d['recurrence_days'])): ?>
+										<span class="badge bg-success bg-opacity-10 text-success border"><?= [7 => 'Semanal', 15 => 'Quincenal', 30 => 'Mensual'][(int) $d['recurrence_days']] ?? ('Cada ' . (int) $d['recurrence_days'] . ' días') ?></span>
+									<?php endif; ?>
+								<?php else: ?>
+									<span class="text-muted">—</span>
+								<?php endif; ?>
+							</td>
+							<td><?= esc($d['raffle_name'] ?? '—') ?></td>
 								<td><?= date('d/m/Y H:i', strtotime($d['scheduled_at'])) ?></td>
 								<td>
 									<span class="badge bg-light text-dark border">
@@ -84,12 +98,12 @@
 											   class="btn btn-sm btn-outline-primary" title="Editar">
 												<i class="bx bx-edit-alt"></i>
 											</a>
-											<a href="<?= base_url('sorteos/' . $d['id'] . '/ejecutar') ?>"
-											   class="btn btn-sm btn-outline-success"
+											<a href="#" class="btn btn-sm btn-outline-success btn-ejecutar"
 											   title="Ejecutar Sorteo"
-											   data-confirm="¿Ejecutar el sorteo <?= esc($d['name']) ?>?"
-											   data-confirm-text="Se seleccionarán ganadores aleatoriamente"
-											   data-confirm-btn="Sí, ejecutar">
+											   data-url="<?= base_url('sorteos/' . $d['id'] . '/ejecutar') ?>"
+											   data-prize="<?= esc($d['prize_name'] ?? '') ?>"
+											   data-lottery="<?= esc($d['lottery_name'] ?? '') ?>"
+											   data-length="<?= (int) ($d['number_length'] ?? 0) ?>">
 												<i class="bx bx-play"></i>
 											</a>
 											<a href="<?= base_url('sorteos/' . $d['id'] . '/cancelar') ?>"
@@ -124,4 +138,95 @@
 		</div>
 	</div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+	function escapar(texto) {
+		const div = document.createElement('div');
+		div.textContent = texto;
+		return div.innerHTML;
+	}
+
+	function enviarSorteo(url, resultado) {
+		const form = document.createElement('form');
+		form.method = 'POST';
+		form.action = url;
+
+		const csrf = document.createElement('input');
+		csrf.type = 'hidden';
+		csrf.name = 'csrf_test_name';
+		csrf.value = '<?= csrf_hash() ?>';
+		form.appendChild(csrf);
+
+		if (resultado !== null) {
+			const campo = document.createElement('input');
+			campo.type = 'hidden';
+			campo.name = 'lottery_result';
+			campo.value = resultado;
+			form.appendChild(campo);
+		}
+
+		document.body.appendChild(form);
+		form.submit();
+	}
+
+	document.querySelectorAll('.btn-ejecutar').forEach(function (btn) {
+		btn.addEventListener('click', function (e) {
+			e.preventDefault();
+
+			const url = this.dataset.url;
+			const premio = this.dataset.prize;
+			const loteria = this.dataset.lottery || 'Lotería';
+			const longitud = parseInt(this.dataset.length || 0, 10);
+
+			if (!premio) {
+				Swal.fire({
+					title: '¿Ejecutar sorteo?',
+					text: 'Se seleccionarán ganadores aleatoriamente',
+					icon: 'question',
+					showCancelButton: true,
+					confirmButtonText: 'Sí, ejecutar',
+					cancelButtonText: 'Cancelar'
+				}).then(function (resultado) {
+					if (resultado.isConfirmed) {
+						enviarSorteo(url, null);
+					}
+				});
+				return;
+			}
+
+			Swal.fire({
+				title: 'Resultado de la lotería',
+				html: '<div class="text-start small text-muted">' +
+					'<p class="mb-1"><strong class="text-dark">Premio:</strong> ' + escapar(premio) + '</p>' +
+					'<p class="mb-1"><strong class="text-dark">Lotería:</strong> ' + escapar(loteria) + '</p>' +
+					'<p class="mb-0">Ingresa el resultado oficial (' + longitud + ' dígitos)</p></div>',
+				input: 'text',
+				inputAttributes: {
+					maxlength: longitud,
+					autocapitalize: 'off',
+					autocomplete: 'off',
+					placeholder: 'Ej: ' + '0'.repeat(longitud)
+				},
+				inputValidator: function (valor) {
+					if (!valor || !valor.trim()) {
+						return 'El resultado es obligatorio';
+					}
+					if (!new RegExp('^[0-9]{' + longitud + '}$').test(valor.trim())) {
+						return 'Debe tener exactamente ' + longitud + ' dígitos';
+					}
+				},
+				showCancelButton: true,
+				confirmButtonText: 'Ejecutar sorteo',
+				cancelButtonText: 'Cancelar',
+				confirmButtonColor: '#198754'
+			}).then(function (resultado) {
+				if (resultado.isConfirmed) {
+					enviarSorteo(url, resultado.value.trim());
+				}
+			});
+		});
+	});
+});
+</script>
 <?= $this->endSection() ?>

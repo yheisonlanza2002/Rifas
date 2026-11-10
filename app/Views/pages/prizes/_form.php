@@ -113,17 +113,18 @@ $currencies ??= [];
 		<select class="form-select <?= !empty($errors['recurrence_days'] ?? null) ? 'is-invalid' : '' ?>"
 				id="recurrence_days" name="recurrence_days">
 			<option value="">Seleccionar...</option>
-			<option value="7" <?= (old('recurrence_days') ?? ($prize['recurrence_days'] ?? '')) == 7 ? 'selected' : '' ?>>Cada 7 días</option>
-			<option value="15" <?= (old('recurrence_days') ?? ($prize['recurrence_days'] ?? '')) == 15 ? 'selected' : '' ?>>Cada 15 días</option>
-			<option value="30" <?= (old('recurrence_days') ?? ($prize['recurrence_days'] ?? '')) == 30 ? 'selected' : '' ?>>Cada 30 días</option>
+			<option value="7" <?= (old('recurrence_days') ?? ($prize['recurrence_days'] ?? '')) == 7 ? 'selected' : '' ?>>Semanal (7 días)</option>
+			<option value="15" <?= (old('recurrence_days') ?? ($prize['recurrence_days'] ?? '')) == 15 ? 'selected' : '' ?>>Quincenal (15 días)</option>
+			<option value="30" <?= (old('recurrence_days') ?? ($prize['recurrence_days'] ?? '')) == 30 ? 'selected' : '' ?>>Mensual (30 días)</option>
 		</select>
 		<?= view('partials/field_error', ['errors' => $errors, 'field' => 'recurrence_days']) ?>
 	</div>
-	<div class="col-md-6 campo-money">
-		<label for="draw_date" class="form-label">Fecha del Sorteo <span class="text-danger">*</span></label>
+	<div class="col-md-6">
+		<label for="draw_date" class="form-label">Fecha de Inicio <span class="text-danger">*</span></label>
 		<input type="date" class="form-control <?= !empty($errors['draw_date'] ?? null) ? 'is-invalid' : '' ?>"
-			   id="draw_date" name="draw_date"
+			   id="draw_date" name="draw_date" required
 			   value="<?= esc(old('draw_date') ?? ($prize['draw_date'] ?? '')) ?>">
+		<div class="form-text">Fecha en que empieza a jugar el premio recurrente. A partir de esta fecha el sistema calcula automáticamente la siguiente entrega según la recurrencia.</div>
 		<?= view('partials/field_error', ['errors' => $errors, 'field' => 'draw_date']) ?>
 	</div>
 
@@ -183,18 +184,14 @@ $currencies ??= [];
 						<label class="form-label">Nombre <span class="text-danger">*</span></label>
 						<input type="text" class="form-control" name="additional_prizes[INDEX][name]" placeholder="Ej: Moto Honda XR 150">
 					</div>
-					<div class="col-md-3">
+					<div class="col-md-4">
 						<label class="form-label">Tipo <span class="text-danger">*</span></label>
 						<select class="form-select" name="additional_prizes[INDEX][type]">
 							<option value="PRIZE">Premio Físico</option>
 							<option value="MONEY">Premio en Dinero</option>
 						</select>
 					</div>
-					<div class="col-md-3">
-						<label class="form-label">Valor <span class="text-danger">*</span></label>
-						<input type="number" class="form-control" name="additional_prizes[INDEX][value]" placeholder="Ej: 100000" min="0" data-format-number>
-					</div>
-					<div class="col-md-2">
+					<div class="col-md-4">
 						<label class="form-label">Lotería <span class="text-danger">*</span></label>
 						<select class="form-select" name="additional_prizes[INDEX][lottery_id]">
 							<option value="">Seleccionar...</option>
@@ -204,17 +201,18 @@ $currencies ??= [];
 						</select>
 					</div>
 					<div class="col-md-4 prize-money-fields" style="display:none;">
-						<label class="form-label">Recurrencia (días)</label>
+						<label class="form-label">Recurrencia</label>
 						<select class="form-select" name="additional_prizes[INDEX][recurrence_days]">
 							<option value="">Seleccionar...</option>
-							<option value="7">Cada 7 días</option>
-							<option value="15">Cada 15 días</option>
-							<option value="30">Cada 30 días</option>
+							<option value="7">Semanal (7 días)</option>
+							<option value="15">Quincenal (15 días)</option>
+							<option value="30">Mensual (30 días)</option>
 						</select>
 					</div>
-					<div class="col-md-4 prize-money-fields" style="display:none;">
-						<label class="form-label">Fecha del Sorteo</label>
-						<input type="date" class="form-control" name="additional_prizes[INDEX][draw_date]">
+					<div class="col-md-4">
+						<label class="form-label">Fecha de Inicio <span class="text-danger">*</span></label>
+						<input type="date" class="form-control" name="additional_prizes[INDEX][draw_date]" required>
+						<div class="form-text">Inicio del premio recurrente; desde aquí el sistema calcula la siguiente entrega.</div>
 					</div>
 					<div class="col-md-4">
 						<label class="form-label">Imagen</label>

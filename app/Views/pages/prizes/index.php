@@ -48,7 +48,7 @@
                                 </span>
                                 <?php if ($p['recurrence_days']): ?>
                                     <span class="badge bg-warning-subtle text-warning">
-                                        Cada <?= $p['recurrence_days'] ?> días
+                                        <?= [7 => 'Semanal', 15 => 'Quincenal', 30 => 'Mensual'][$p['recurrence_days']] ?? ('Cada ' . $p['recurrence_days'] . ' días') ?>
                                     </span>
                                 <?php endif; ?>
                             <?php else: ?>
@@ -61,9 +61,15 @@
                             </span>
                         </div>
                         <div class="mt-3">
-                            <span class="badge bg-dark text-light">
-                                $ <?= number_format($p['value'], 0) ?> <?= esc($p['currency']) ?>
-                            </span>
+                            <?php if ((float) $p['value'] > 0): ?>
+                                <span class="badge bg-dark text-light">
+                                    $ <?= number_format((float) $p['value'], 0) ?> <?= esc($p['currency']) ?>
+                                </span>
+                            <?php else: ?>
+                                <span class="badge bg-light text-dark border">
+                                    <i class="bx bx-gift"></i> Incluido con la compra
+                                </span>
+                            <?php endif; ?>
                         </div>
                     </div>
                     <div class="prize-footer">

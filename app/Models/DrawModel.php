@@ -13,9 +13,9 @@ class DrawModel extends Model
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
     protected $allowedFields    = [
-        'uuid', 'company_id', 'raffle_id', 'name',
+        'uuid', 'company_id', 'raffle_id', 'prize_id', 'name',
         'scheduled_at', 'executed_at', 'status', 'method',
-        'seed', 'result_hash', 'external_reference', 'created_by',
+        'seed', 'lottery_result', 'result_hash', 'external_reference', 'created_by',
     ];
 
     protected $useTimestamps = true;
@@ -30,7 +30,8 @@ class DrawModel extends Model
 
     public function forCompany(int $companyId): self
     {
-        return $this->where('draws.company_id', $companyId)
+        return $this->select('draws.*, raffles.name AS raffle_name', false)
+            ->where('draws.company_id', $companyId)
             ->join('raffles', 'raffles.id = draws.raffle_id');
     }
 

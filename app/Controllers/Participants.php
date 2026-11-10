@@ -90,6 +90,55 @@ class Participants extends BaseController
     }
 
     /**
+     * POST /participantes/rapido — Alta rápida desde el POS (JSON)
+     */
+    public function rapido()
+    {
+        $post = $this->request->getPost();
+
+        if (!$this->validateData($post, 'participantCreate')) {
+            $errors = $this->validator->getErrors();
+            return $this->response->setJSON([
+                'ok'     => false,
+                'errors' => implode(' ', $errors),
+            ]);
+        }
+
+        $id = $this->participantModel->insert([
+            'uuid'            => $this->generateUuid(),
+            'company_id'      => session()->get('company_id'),
+            'document_type'   => $post['document_type'],
+            'document_number' => $post['document_number'],
+            'name'            => $post['name'],
+            'last_name'       => $post['last_name'] ?? null,
+            'email'           => !empty($post['email']) ? $post['email'] : null,
+            'phone'           => $post['phone'],
+            'address'         => $post['address'] ?? null,
+            'city'            => $post['city'] ?? null,
+            'department'      => $post['department'] ?? null,
+            'birth_date'      => !empty($post['birth_date']) ? $post['birth_date'] : null,
+            'gender'          => !empty($post['gender']) ? $post['gender'] : null,
+            'notes'           => $post['notes'] ?? null,
+            'source'          => 'WEB',
+            'status'          => 'ACTIVE',
+        ], true);
+
+        if (!$id) {
+            return $this->response->setJSON(['ok' => false, 'errors' => 'No se pudo crear el participante.']);
+        }
+
+        $participant = $this->participantModel->find($id);
+        $label = trim(($participant['name'] ?? '') . ' ' . ($participant['last_name'] ?? ''))
+            . ' (' . ($participant['document_number'] ?? '') . ')';
+
+        return $this->response->setJSON([
+            'ok'    => true,
+            'id'    => (int) $id,
+            'label' => $label,
+        ]);
+    }
+
+    /**
      * GET /participantes/{id}/editar â€” Formulario de ediciÃ³n
      */
     public function edit(int $id)

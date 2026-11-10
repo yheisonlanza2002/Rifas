@@ -30,7 +30,8 @@ class TicketModel extends Model
 
     public function forCompany(int $companyId): self
     {
-        return $this->where('tickets.company_id', $companyId)
+        return $this->select('tickets.*, raffles.name AS raffle_name', false)
+            ->where('tickets.company_id', $companyId)
             ->join('raffles', 'raffles.id = tickets.raffle_id');
     }
 

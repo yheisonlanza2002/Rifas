@@ -55,6 +55,9 @@ class Draws extends BaseController
 
         $draws = $this->drawModel
             ->forCompany($companyId)
+            ->select('raffles.number_length, prizes.name AS prize_name, prizes.prize_type, prizes.recurrence_days, lotteries.name AS lottery_name')
+            ->join('prizes', 'prizes.id = draws.prize_id', 'left')
+            ->join('lotteries', 'lotteries.id = prizes.lottery_id', 'left')
             ->orderBy('draws.scheduled_at', 'DESC')
             ->findAll();
 
@@ -186,17 +189,30 @@ class Draws extends BaseController
                 ->with('error', 'El sorteo ya fue ejecutado o cancelado.');
         }
 
-        $companyId = (int) session()->get('company_id');
-        $prizes = $this->prizeModel
-            ->forCompany($companyId)
-            ->where('raffle_id', $draw['raffle_id'])
-            ->where('status', 'ACTIVE')
-            ->orderBy('position', 'ASC')
-            ->findAll();
+        $post = $this->request->getPost();
+        $resultado = trim((string) ($post['lottery_result'] ?? ''));
 
-        if (empty($prizes)) {
+        if (!empty($draw['prize_id']) && !$this->validateData($post, 'drawExecute')) {
+            return redirect()->back()
+                ->withInput()
+                ->with('errors', $this->validator->getErrors())
+                ->with('error', 'Revisa los errores del formulario.');
+        }
+
+        $companyId = (int) session()->get('company_id');
+        $raffle = $this->raffleModel->forCompany($companyId)->find($draw['raffle_id']);
+
+        if (!$raffle) {
             return redirect()->to(base_url('sorteos'))
-                ->with('error', 'No hay premios activos para esta rifa.');
+                ->with('error', 'La rifa del sorteo no existe.');
+        }
+
+        $longitud = (int) $raffle['number_length'];
+
+        if ($resultado !== '' && strlen($resultado) !== $longitud) {
+            return redirect()->back()
+                ->with('errors', ['lottery_result' => "El resultado debe tener {$longitud} dígitos."])
+                ->with('error', "El resultado de la lotería debe tener {$longitud} dígitos.");
         }
 
         $soldTickets = $this->getSoldTickets($draw['raffle_id']);
@@ -206,8 +222,38 @@ class Draws extends BaseController
                 ->with('error', 'No hay boletas vendidas para esta rifa.');
         }
 
-        $seed = $draw['seed'] ?? $this->generateSeed();
-        $winners = $this->selectWinners($prizes, $soldTickets, $seed);
+        $winners = [];
+        $sinGanador = false;
+        $seed = $resultado !== '' ? $resultado : ($draw['seed'] ?? $this->generateSeed());
+
+        if (!empty($draw['prize_id'])) {
+            $coincidencia = $this->buscarBoletaPorResultado($draw['raffle_id'], $resultado);
+
+            if ($coincidencia) {
+                $winners[] = [
+                    'prize_id'         => $draw['prize_id'],
+                    'ticket_id'        => $coincidencia['ticket_id'],
+                    'ticket_number_id' => $coincidencia['id'],
+                    'participant_id'   => $coincidencia['participant_id'],
+                ];
+            } else {
+                $sinGanador = true;
+            }
+        } else {
+            $prizes = $this->prizeModel
+                ->forCompany($companyId)
+                ->where('prizes.raffle_id', $draw['raffle_id'])
+                ->where('prizes.status', 'ACTIVE')
+                ->orderBy('prizes.position', 'ASC')
+                ->findAll();
+
+            if (empty($prizes)) {
+                return redirect()->to(base_url('sorteos'))
+                    ->with('error', 'No hay premios activos para esta rifa.');
+            }
+
+            $winners = $this->selectWinners($prizes, $soldTickets, $seed);
+        }
 
         $this->drawModel->update($id, [
             'status'      => 'EXECUTING',
@@ -228,6 +274,15 @@ class Draws extends BaseController
                 'status'           => 'PENDING',
             ]);
 
+            if (!empty($winner['ticket_number_id'])) {
+                $this->db->table('ticket_numbers')
+                    ->where('id', $winner['ticket_number_id'])
+                    ->update([
+                        'is_winner' => 1,
+                        'won_at'    => date('Y-m-d H:i:s'),
+                    ]);
+            }
+
             $this->ticketEventModel->insert([
                 'uuid'             => $this->generateUuid(),
                 'raffle_id'        => $draw['raffle_id'],
@@ -244,12 +299,78 @@ class Draws extends BaseController
         }
 
         $this->drawModel->update($id, [
-            'status'      => 'COMPLETED',
-            'result_hash' => $resultHash,
+            'status'         => 'COMPLETED',
+            'result_hash'    => $resultHash,
+            'lottery_result' => $resultado !== '' ? $resultado : null,
         ]);
 
+        $siguiente = null;
+        if (!empty($draw['prize_id'])) {
+            $prize = $this->prizeModel->find($draw['prize_id']);
+            $siguiente = $this->programarSiguienteSorteo($draw, $prize ?? [], $raffle);
+        }
+
+        if ($sinGanador) {
+            $mensaje = "Sorteo ejecutado. Ninguna boleta vendida tiene el número {$resultado}.";
+        } else {
+            $mensaje = 'Sorteo ejecutado correctamente. ' . count($winners) . ' ganador(es) seleccionado(s).';
+        }
+
+        if ($siguiente) {
+            $mensaje .= ' Siguiente sorteo programado para ' . date('d/m/Y', strtotime($siguiente)) . '.';
+        }
+
         return redirect()->to(base_url('sorteos'))
-            ->with('success', 'Sorteo ejecutado correctamente. ' . count($winners) . ' ganador(es) seleccionado(s).');
+            ->with('success', $mensaje);
+    }
+
+    private function buscarBoletaPorResultado(int $raffleId, string $resultado): ?array
+    {
+        $fila = $this->db->table('ticket_numbers tn')
+            ->select('tn.id, tn.ticket_id, s.participant_id')
+            ->join('tickets t', 't.id = tn.ticket_id')
+            ->join('sale_items si', 'si.ticket_id = t.id')
+            ->join('sales s', 's.id = si.sale_id')
+            ->where('tn.raffle_id', $raffleId)
+            ->where('tn.number', $resultado)
+            ->where('t.status', 'SOLD')
+            ->where('s.status', 'PAID')
+            ->get()
+            ->getRowArray();
+
+        return $fila ?: null;
+    }
+
+    private function programarSiguienteSorteo(array $draw, array $prize, array $raffle): ?string
+    {
+        if (($prize['prize_type'] ?? '') !== 'MONEY' || empty($prize['recurrence_days'])) {
+            return null;
+        }
+
+        if (($raffle['status'] ?? '') === 'CLOSED') {
+            return null;
+        }
+
+        $dias = (int) $prize['recurrence_days'];
+        $siguiente = date('Y-m-d H:i:s', strtotime($draw['scheduled_at'] . ' +' . $dias . ' days'));
+
+        if (!empty($raffle['end_at']) && strtotime($siguiente) > strtotime($raffle['end_at'])) {
+            return null;
+        }
+
+        $this->drawModel->insert([
+            'uuid'         => $this->generateUuid(),
+            'company_id'   => (int) $draw['company_id'],
+            'raffle_id'    => $draw['raffle_id'],
+            'prize_id'     => $draw['prize_id'],
+            'name'         => $draw['name'],
+            'scheduled_at' => $siguiente,
+            'status'       => 'SCHEDULED',
+            'method'       => 'MANUAL',
+            'created_by'   => session()->get('user_id'),
+        ]);
+
+        return $siguiente;
     }
 
     public function results(int $id): string
@@ -277,12 +398,35 @@ class Draws extends BaseController
         }
         $participantMap = array_column($participants, null, 'id');
 
+        $numberMap = [];
+        $numberIds = array_filter(array_column($winners, 'ticket_number_id'));
+        if (!empty($numberIds)) {
+            $numeros = $this->db->table('ticket_numbers')
+                ->whereIn('id', $numberIds)
+                ->get()
+                ->getResultArray();
+            $numberMap = array_column($numeros, 'number', 'id');
+        }
+
+        $ticketMap = [];
+        $ticketIds = array_filter(array_column($winners, 'ticket_id'));
+        if (!empty($ticketIds)) {
+            $boletas = $this->db->table('tickets')
+                ->select('id, code')
+                ->whereIn('id', $ticketIds)
+                ->get()
+                ->getResultArray();
+            $ticketMap = array_column($boletas, 'code', 'id');
+        }
+
         return view('pages/draws/results', [
             'title'           => 'Resultados del Sorteo - Rifas',
             'draw'            => $draw,
             'winners'         => $winners,
             'prizeMap'        => $prizeMap,
             'participantMap'  => $participantMap,
+            'numberMap'       => $numberMap,
+            'ticketMap'       => $ticketMap,
             'winnerStatuses'  => self::WINNER_STATUSES,
             'methods'         => self::METHODS,
         ]);

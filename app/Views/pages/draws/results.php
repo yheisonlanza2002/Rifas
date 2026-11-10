@@ -24,6 +24,9 @@
 					Rifa: <?= esc($draw['raffle_name'] ?? '—') ?> |
 					<?= $methods[$draw['method']] ?? '' ?> |
 					<?= date('d/m/Y H:i', strtotime($draw['executed_at'])) ?>
+					<?php if (!empty($draw['lottery_result'])): ?>
+						| <strong class="text-dark">Resultado: <?= esc($draw['lottery_result']) ?></strong>
+					<?php endif; ?>
 				</small>
 			</div>
 			<?php if ($draw['result_hash']): ?>
@@ -61,8 +64,14 @@
 										<?= esc($prizeMap[$w['prize_id']]['name'] ?? '—') ?>
 									</span>
 								</td>
-								<td><?= esc($w['ticket_id']) ?></td>
-								<td><?= esc($w['ticket_number_id']) ?></td>
+								<td><?= esc($ticketMap[$w['ticket_id']] ?? $w['ticket_id']) ?></td>
+								<td>
+									<?php if (!empty($numberMap[$w['ticket_number_id']])): ?>
+										<span class="badge bg-dark fs-6"><?= esc($numberMap[$w['ticket_number_id']]) ?></span>
+									<?php else: ?>
+										<span class="text-muted">—</span>
+									<?php endif; ?>
+								</td>
 								<td>
 									<?php if (isset($participantMap[$w['participant_id']])): ?>
 										<?= esc($participantMap[$w['participant_id']]['name']) ?>

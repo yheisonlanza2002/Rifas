@@ -1,0 +1,132 @@
+.raffle-panel {
+	border: 1px solid #e6e8f0;
+	border-radius: 12px;
+	background: #fff;
+	overflow: hidden;
+	margin-bottom: 1.25rem;
+}
+.raffle-panel-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	flex-wrap: wrap;
+	padding: 14px 16px;
+	background: #f8f9fc;
+	cursor: pointer;
+	transition: background 0.2s ease;
+}
+.raffle-panel-header:hover {
+	background: #f1f3f9;
+}
+.raffle-panel-title {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+.raffle-panel-title .raffle-icon {
+	width: 36px;
+	height: 36px;
+	border-radius: 10px;
+	background: #e7f1ff;
+	color: #0d6efd;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 18px;
+}
+.raffle-progress {
+	width: 140px;
+	height: 8px;
+	background: #e9ecef;
+	border-radius: 999px;
+	overflow: hidden;
+}
+.raffle-progress-bar {
+	height: 100%;
+	background: linear-gradient(90deg, #0d6efd, #6f42c1);
+	border-radius: 999px;
+	transition: width 0.3s ease;
+}
+.raffle-panel-header .chev {
+	font-size: 20px;
+	color: #5f6a7d;
+	transition: transform 0.25s ease;
+}
+.raffle-panel-header.collapsed .chev {
+	transform: rotate(-90deg);
+}
+.raffle-panel-body {
+	padding: 16px;
+}
+
+.ticket-card {
+	border: 1px solid #e6e8f0;
+	border-radius: 12px;
+	background: #fff;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	transition: all 0.2s ease;
+}
+.ticket-card:hover {
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+	transform: translateY(-2px);
+}
+.ticket-card .ticket-top {
+	padding: 10px 12px;
+	background: #f8f9fc;
+	border-bottom: 1px solid #e6e8f0;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 6px;
+	flex-wrap: wrap;
+	border-radius: 12px 12px 0 0;
+}
+.ticket-card .ticket-code {
+	font-weight: 700;
+	font-size: 12.5px;
+	letter-spacing: 0.3px;
+	color: #2f3542;
+}
+.ticket-card .ticket-body {
+	padding: 12px;
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	font-size: 13px;
+	color: #5f6a7d;
+}
+.ticket-card .ticket-info {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+.ticket-card .ticket-info i {
+	color: #0d6efd;
+	font-size: 15px;
+}
+.ticket-card .ticket-actions {
+	padding: 10px 12px;
+	background: #f8f9fc;
+	border-top: 1px solid #e6e8f0;
+	display: flex;
+	gap: 8px;
+	border-radius: 0 0 12px 12px;
+}
+.ticket-card.ticket-sold {
+	border-left: 3px solid #0d6efd;
+}
+.ticket-card.ticket-available {
+	border-left: 3px solid #198754;
+}
+.ticket-card.ticket-reserved {
+	border-left: 3px solid #ffc107;
+}
+.ticket-card.ticket-cancelled {
+	border-left: 3px solid #6c757d;
+	opacity: 0.75;
+}
